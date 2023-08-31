@@ -1,8 +1,10 @@
 use petgraph::{prelude::DiGraph, stable_graph::NodeIndex};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use crate::lock::{self, FlakeLock};
+use petgraph::visit::EdgeRef;
+
+use crate::lock;
 
 #[derive(Deserialize, Serialize, PartialEq, Debug)]
 pub struct Node {
@@ -17,11 +19,96 @@ pub struct NodeGraph {
     pub version: u8,
 }
 
-impl From<lock::FlakeLock> for NodeGraph {
-    fn from(flake_lock: FlakeLock) -> Self {
-        let mut graph: DiGraph<Node, String> = DiGraph::new();
+/// Process inputs for a node, creating graph edges
+fn process_node_inputs<'a>(
+    node_name: &String,
+    flake_lock: &lock::FlakeLock,
+    indices: &'a HashMap<String, NodeIndex>,
+    mut graph: &'a mut DiGraph<Node, String>,
+    mut visited_nodes: &'a mut HashSet<NodeIndex>,
+) -> (&'a mut DiGraph<Node, String>, &'a mut HashSet<NodeIndex>) {
+    let node_index = indices[node_name];
+    if visited_nodes.contains(&node_index) {
+        // Prevents duplicate edges
+        return (graph, visited_nodes);
+    }
 
+    let raw_node = match flake_lock.nodes.get(node_name) {
+        Some(node) => node,
+        None => panic!("Node name does not exist in flake lock"),
+    };
+    // Create an edge for each node input
+    for (input_edge_name, input) in &raw_node.inputs {
+        // Inputs can point directly to a node by name or by a path of inputs
+        match input {
+            // Simple case, input is linked by name
+            lock::NodeInput::Direct(input_node_name) => {
+                graph.add_edge(
+                    node_index,
+                    indices[input_node_name],
+                    input_edge_name.clone(),
+                );
+            }
+            // Flake uses a "follows" directive, must traverse inputs down from root node
+            lock::NodeInput::Path(input_path) => {
+                if input_path.len() < 1 {
+                    panic!("Input paths must have a length > 0");
+                }
+                let mut cursor = indices[&flake_lock.root];
+                // Follow the path of inputs starting at the root
+                for step_name in input_path {
+                    // Check to see if the given node has been processed yet
+                    if !visited_nodes.contains(&cursor) {
+                        let cursor_node = match graph.node_weight(cursor) {
+                            Some(node) => node,
+                            // This should be unreachable™
+                            None => panic!("Node could not be found"),
+                        };
+                        // If not, process it so we can follow its trail of inputs
+                        (graph, visited_nodes) = process_node_inputs(
+                            &cursor_node.name.clone(),
+                            flake_lock,
+                            indices,
+                            graph,
+                            visited_nodes,
+                        );
+                    }
+
+                    let mut found_edge = false;
+                    // Look for an edge with the correct input name
+                    for edge in graph.edges(cursor) {
+                        if *edge.weight() == *step_name {
+                            // Advance the cursor down the path
+                            cursor = edge.target();
+                            found_edge = true;
+                            break;
+                        }
+                    }
+
+                    if !found_edge {
+                        panic!("Edge path could not be followed")
+                    }
+                }
+                graph.add_edge(node_index, cursor, input_edge_name.clone());
+            }
+        }
+    }
+
+    // Mark the edge as visited so that it is not processed twice
+    visited_nodes.insert(node_index);
+
+    return (graph, visited_nodes);
+}
+
+impl From<lock::FlakeLock> for NodeGraph {
+    fn from(flake_lock: lock::FlakeLock) -> Self {
+        let mut graph = &mut DiGraph::<Node, String>::new();
+
+        // Map of node name -> graph node index
         let mut indices = HashMap::<String, NodeIndex>::new();
+        // For each node in the flake lock:
+        // 1. Create the graph node
+        // 2. Insert the node into the graph
         for (key, raw_node) in &flake_lock.nodes {
             let node = graph.add_node(Node {
                 name: key.clone(),
@@ -31,16 +118,14 @@ impl From<lock::FlakeLock> for NodeGraph {
             indices.insert(key.clone(), node);
         }
 
-        for (a_key, raw_node) in flake_lock.nodes {
-            for (e, b_keys) in raw_node.inputs {
-                for b_key in b_keys.0 {
-                    graph.add_edge(indices[&a_key], indices[&b_key], e.clone());
-                }
-            }
+        let mut visited_nodes = &mut HashSet::<NodeIndex>::default();
+        for node_name in flake_lock.nodes.keys() {
+            (graph, visited_nodes) =
+                process_node_inputs(node_name, &flake_lock, &indices, graph, visited_nodes);
         }
 
         Self {
-            graph,
+            graph: std::mem::take(graph),
             root: indices[&flake_lock.root],
             version: flake_lock.version,
         }

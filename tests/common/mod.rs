@@ -23,8 +23,10 @@ fn nixpkgs_node() -> Node {
     }
 }
 
+/// JSON string of a simple lock file consisting of one input
 pub const SIMPLE_LOCK_STR: &str = include_str!("./simple_flake.lock");
 
+/// Struct representation of a simple lock file consisting of one input
 pub fn simple_lock() -> FlakeLock {
     return FlakeLock {
         root: "root".to_string(),
@@ -38,7 +40,7 @@ pub fn simple_lock() -> FlakeLock {
                     original: None,
                     inputs: HashMap::from([(
                         "nixpkgs".to_string(),
-                        NodeInput(vec!["nixpkgs".to_string()]),
+                        NodeInput::Direct("nixpkgs".to_string()),
                     )]),
                 },
             ),
@@ -46,8 +48,10 @@ pub fn simple_lock() -> FlakeLock {
     };
 }
 
+/// JSON string of a lock file with an input bound through a `follows` directive
 pub const BOUND_LOCK_STR: &str = include_str!("./bound_flake.lock");
 
+// Struct representation of a lock file with an input bound through a `follows` directive
 pub fn bound_lock() -> FlakeLock {
     return FlakeLock {
         root: "root".to_string(),
@@ -74,7 +78,7 @@ pub fn bound_lock() -> FlakeLock {
                     })),
                     inputs: HashMap::from([(
                         "nixpkgs".to_string(),
-                        NodeInput(vec!["nixpkgs".to_string()]),
+                        NodeInput::Path(vec!["nixpkgs".to_string()]),
                     )]),
                 },
             ),
@@ -87,11 +91,11 @@ pub fn bound_lock() -> FlakeLock {
                     inputs: HashMap::from([
                         (
                             "nixpkgs".to_string(),
-                            NodeInput(vec!["nixpkgs".to_string()]),
+                            NodeInput::Direct("nixpkgs".to_string()),
                         ),
                         (
                             "home-manager".to_string(),
-                            NodeInput(vec!["home-manager".to_string()]),
+                            NodeInput::Direct("home-manager".to_string()),
                         ),
                     ]),
                 },

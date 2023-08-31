@@ -1,7 +1,5 @@
-use serde::de::{self, value, SeqAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt;
 
 #[derive(Deserialize, Serialize, PartialEq, Debug)]
 pub struct FlakeLock {
@@ -50,36 +48,9 @@ pub struct NodeRefIndirect {
 }
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
-pub struct NodeInput(#[serde(deserialize_with = "string_or_vec")] pub Vec<String>);
-
-/// From https://github.com/serde-rs/serde/issues/889#issuecomment-295988865
-fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct StringOrVec;
-
-    impl<'de> Visitor<'de> for StringOrVec {
-        type Value = Vec<String>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("string or list of strings")
-        }
-
-        fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(vec![s.to_owned()])
-        }
-
-        fn visit_seq<S>(self, seq: S) -> Result<Self::Value, S::Error>
-        where
-            S: SeqAccess<'de>,
-        {
-            Deserialize::deserialize(value::SeqAccessDeserializer::new(seq))
-        }
-    }
-
-    deserializer.deserialize_any(StringOrVec)
+#[serde(untagged)]
+pub enum NodeInput {
+    Direct(String),
+    /// The path of inputs to follow from the `root` to the target
+    Path(Vec<String>),
 }
