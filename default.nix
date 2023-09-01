@@ -7,4 +7,11 @@ pkgs.rustPlatform.buildRustPackage {
   version = manifest.version;
   cargoLock.lockFile = ./Cargo.lock;
   src = pkgs.lib.cleanSource ./.;
+
+  doCheck = true;
+  checkPhase = ''
+    runHook preCheck
+    cargoCheckHook
+    runHook postCheck
+  '';
 }

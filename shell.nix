@@ -7,4 +7,7 @@ pkgs.mkShell {
     clippy
     graphviz
   ];
+  shellHook = ''
+    export RUST_BACKTRACE="1"
+  '';
 }

@@ -13,6 +13,12 @@
     packages = forEachSystem (system: {
       default = nixpkgs.legacyPackages.${system}.callPackage ./. { };
     });
+
+    checks = forEachSystem (system: {
+      # Build the default package, including tests
+      inherit (self.packages.${system}) default;
+    });
+
     devShells = forEachSystem (system: {
       default = nixpkgs.legacyPackages.${system}.callPackage ./shell.nix { };
     });
