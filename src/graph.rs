@@ -1,4 +1,4 @@
-use petgraph::{prelude::DiGraph, stable_graph::NodeIndex};
+use petgraph::{dot, prelude::DiGraph, stable_graph::NodeIndex};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -13,8 +13,24 @@ pub struct Node {
     pub locked: Option<lock::NodeLock>,
 }
 
+impl Node {
+    fn digest(&self) -> Option<String> {
+        match &self.locked {
+            Some(locked) => Some(match &locked.reference {
+                lock::NodeRef::GitHub(github) => {
+                    format!("github::{}/{}", github.owner, github.repo)
+                }
+                lock::NodeRef::Indirect(indirect) => format!("indirect::{}", indirect.id),
+            }),
+            None => None,
+        }
+    }
+}
+
+type GraphT = DiGraph<Node, String>;
+
 pub struct NodeGraph {
-    pub graph: DiGraph<Node, String>,
+    pub graph: GraphT,
     pub root: NodeIndex,
     pub version: u8,
 }
@@ -24,9 +40,9 @@ fn process_node_inputs<'a>(
     node_name: &String,
     flake_lock: &lock::FlakeLock,
     indices: &'a HashMap<String, NodeIndex>,
-    mut graph: &'a mut DiGraph<Node, String>,
+    mut graph: &'a mut GraphT,
     mut visited_nodes: &'a mut HashSet<NodeIndex>,
-) -> (&'a mut DiGraph<Node, String>, &'a mut HashSet<NodeIndex>) {
+) -> (&'a mut GraphT, &'a mut HashSet<NodeIndex>) {
     let node_index = indices[node_name];
     if visited_nodes.contains(&node_index) {
         // Prevents duplicate edges
@@ -129,6 +145,70 @@ impl From<lock::FlakeLock> for NodeGraph {
             root: indices[&flake_lock.root],
             version: flake_lock.version,
         }
+    }
+}
+
+impl NodeGraph {
+    pub fn similarity_map(&self) -> HashMap<String, Vec<NodeIndex>> {
+        let mut duplicates = HashMap::<String, Vec<NodeIndex>>::new();
+        self.graph
+            .node_indices()
+            .for_each(|index| match self.graph.node_weight(index) {
+                Some(weight) => {
+                    match weight.digest() {
+                        Some(digest) => match duplicates.get_mut(&digest) {
+                            Some(indices) => indices.push(index),
+                            None => {
+                                duplicates.insert(digest, vec![index]);
+                            }
+                        },
+                        None => {}
+                    };
+                }
+                None => {}
+            });
+
+        duplicates
+    }
+
+    pub fn to_dot<'a>(&self) -> String {
+        let similarity_map = self.similarity_map();
+
+        let node_labeller: &dyn Fn(_, (_, &Node)) -> String = &|_, (_, n)| {
+            format!(
+                "label = \"{}\"{}",
+                n.name.clone(),
+                match n.digest() {
+                    Some(digest) => match similarity_map.get(&digest) {
+                        Some(similarity) => match similarity.len() {
+                            s if s > 1 => format!(" color={}", s),
+                            _ => "".to_string(),
+                        },
+                        None => "".to_string(),
+                    },
+                    None => "".to_string(),
+                }
+            )
+        };
+
+        let dot = dot::Dot::with_attr_getters(
+            &self.graph,
+            &[
+                dot::Config::EdgeNoLabel,
+                dot::Config::NodeNoLabel,
+                dot::Config::GraphContentOnly,
+            ],
+            &|_, e| format!("label = \"{}\"", e.weight().clone()),
+            node_labeller,
+        );
+
+        format!(
+            r#"digraph {{
+    node [colorscheme=oranges9]
+{:?}
+}}"#,
+            dot
+        )
     }
 }
 
