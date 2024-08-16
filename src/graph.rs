@@ -21,8 +21,10 @@ impl Node {
                     format!("github::{}/{}", github.owner, github.repo)
                 }
                 lock::NodeRef::Indirect(indirect) => format!("indirect::{}", indirect.id),
+                lock::NodeRef::Tarball(tarball) => format!("tarball::{}", tarball.url),
+                lock::NodeRef::Path(path) => format!("path::{}", path.path),
             }),
-            None => None,
+            _ => None,
         }
     }
 }
@@ -51,7 +53,7 @@ fn process_node_inputs<'a>(
 
     let raw_node = match flake_lock.nodes.get(node_name) {
         Some(node) => node,
-        None => panic!("Node name does not exist in flake lock"),
+        _ => panic!("Node name does not exist in flake lock"),
     };
     // Create an edge for each node input
     for (input_edge_name, input) in &raw_node.inputs {
@@ -78,7 +80,7 @@ fn process_node_inputs<'a>(
                         let cursor_node = match graph.node_weight(cursor) {
                             Some(node) => node,
                             // This should be unreachable™
-                            None => panic!("Node could not be found"),
+                            _ => panic!("Node could not be found"),
                         };
                         // If not, process it so we can follow its trail of inputs
                         (graph, visited_nodes) = process_node_inputs(
@@ -158,14 +160,14 @@ impl NodeGraph {
                     match weight.digest() {
                         Some(digest) => match duplicates.get_mut(&digest) {
                             Some(indices) => indices.push(index),
-                            None => {
+                            _ => {
                                 duplicates.insert(digest, vec![index]);
                             }
                         },
-                        None => {}
+                        _ => {}
                     };
                 }
-                None => {}
+                _ => {}
             });
 
         duplicates
@@ -184,9 +186,9 @@ impl NodeGraph {
                             s if s > 1 => format!(" color={}", s),
                             _ => "".to_string(),
                         },
-                        None => "".to_string(),
+                        _ => "".to_string(),
                     },
-                    None => "".to_string(),
+                    _ => "".to_string(),
                 }
             )
         };

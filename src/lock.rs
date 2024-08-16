@@ -30,6 +30,8 @@ pub struct NodeLock {
 pub enum NodeRef {
     GitHub(NodeRefGitHub),
     Indirect(NodeRefIndirect),
+    Tarball(NodeRefTarball),
+    Path(NodeRefPath),
 }
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
@@ -45,6 +47,16 @@ pub struct NodeRefGitHub {
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct NodeRefIndirect {
     pub id: String,
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+pub struct NodeRefTarball {
+    pub url: String,
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+pub struct NodeRefPath {
+    pub path: String,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
