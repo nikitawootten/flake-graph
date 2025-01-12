@@ -103,3 +103,6 @@ pub fn bound_lock() -> FlakeLock {
         ]),
     };
 }
+
+/// JSON string of a lock file with an input loop
+pub const LOOPED_LOCK_STR: &str = include_str!("./looped_flake.lock");
