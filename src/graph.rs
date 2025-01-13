@@ -169,20 +169,44 @@ impl NodeGraph {
         let similarity_map = self.similarity_map();
 
         let node_labeller: &dyn Fn(_, (_, &Node)) -> String = &|_, (_, n)| {
-            format!(
-                "label = \"{}\"{}",
-                n.name.clone(),
-                match n.digest() {
-                    Some(digest) => match similarity_map.get(&digest) {
-                        Some(similarity) => match similarity.len() {
-                            s if s > 1 => format!(" color={}", s),
-                            _ => "".to_string(),
-                        },
-                        _ => "".to_string(),
-                    },
-                    _ => "".to_string(),
+            let mut label = n.name.clone();
+            let mut url: Option<String> = None;
+
+            match &n.locked {
+                Some(locked) => match &locked.reference {
+                    lock::NodeRef::GitHub(github) => {
+                        label.push_str(&format!("\\ngithub:{}/{}", github.owner, github.repo));
+                        url = match &github.revision {
+                            Some(rev) => Some(format!(
+                                "https://github.com/{}/{}/tree/{}",
+                                github.owner, github.repo, rev
+                            )),
+                            _ => Some(format!(
+                                "https://github.com/{}/{}",
+                                github.owner, github.repo
+                            )),
+                        };
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+
+            let mut node_label = format!("label = \"{}\"", label,);
+
+            if let Some(url) = url {
+                node_label.push_str(&format!(", URL = \"{}\"", url));
+            }
+
+            if let Some(digest) = n.digest() {
+                if let Some(similarity) = similarity_map.get(&digest) {
+                    if similarity.len() > 1 {
+                        node_label.push_str(&format!(", color={}", similarity.len()));
+                    }
                 }
-            )
+            }
+
+            node_label
         };
 
         let dot = dot::Dot::with_attr_getters(
@@ -198,9 +222,9 @@ impl NodeGraph {
 
         format!(
             r#"digraph {{
-    node [colorscheme=oranges9]
-{:?}
-}}"#,
+    node [colorscheme=oranges9 shape=record]
+    rankdir=LR
+{:?}}}"#,
             dot
         )
     }
