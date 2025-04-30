@@ -1,4 +1,5 @@
 pub mod common;
+use pretty_assertions::assert_eq;
 
 use common::{bound_lock, simple_lock, BOUND_LOCK_STR, SIMPLE_LOCK_STR};
 use flake_graph::lock::FlakeLock;
