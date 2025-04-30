@@ -1,4 +1,4 @@
-use flake_graph::lock::{FlakeLock, Node, NodeInput, NodeLock, NodeRef, NodeRefGitHub};
+use flake_graph::lock::{FlakeLock, Node, NodeInput, NodeLock, NodeRef, NodeRefGit, NodeRefGitHub};
 use std::collections::HashMap;
 
 fn nixpkgs_node() -> Node {
@@ -38,10 +38,33 @@ pub fn simple_lock() -> FlakeLock {
                 Node {
                     locked: None,
                     original: None,
-                    inputs: HashMap::from([(
-                        "nixpkgs".to_string(),
-                        NodeInput::Direct("nixpkgs".to_string()),
-                    )]),
+                    inputs: HashMap::from([
+                        (
+                            "nixpkgs".to_string(),
+                            NodeInput::Direct("nixpkgs".to_string()),
+                        ),
+                        ("yants".to_string(), NodeInput::Direct("yants".to_string())),
+                    ]),
+                },
+            ),
+            (
+                "yants".to_string(),
+                Node {
+                    locked: Some(NodeLock {
+                        last_modified: 1645270620,
+                        nar_hash: "sha256-wwkl3K200UbW9Z7BRlVH8HOEXCaVYP2MqZpsF9EhgZg=".to_string(),
+                        reference: NodeRef::Git(NodeRefGit {
+                            url: "https://code.tvl.fyi/depot.git:/nix/yants.git".to_string(),
+                            revision: Some("efeb6dc11eb1a1e88d41dc2093fc5aa31f7abd35".to_string()),
+                            reference: Some("refs/heads/canon".to_string()),
+                        }),
+                    }),
+                    original: Some(NodeRef::Git(NodeRefGit {
+                        url: "https://code.tvl.fyi/depot.git:/nix/yants.git".to_string(),
+                        revision: None,
+                        reference: None,
+                    })),
+                    inputs: HashMap::default(),
                 },
             ),
         ]),
