@@ -15,6 +15,7 @@ impl Node {
     fn digest(&self) -> Option<String> {
         match &self.locked {
             Some(locked) => Some(match &locked.reference {
+                lock::NodeRef::Git(git) => format!("git::{}", git.url),
                 lock::NodeRef::GitHub(github) => {
                     format!("github::{}/{}", github.owner, github.repo)
                 }

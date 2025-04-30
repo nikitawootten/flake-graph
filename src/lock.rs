@@ -28,10 +28,20 @@ pub struct NodeLock {
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 #[serde(rename_all = "lowercase", tag = "type")]
 pub enum NodeRef {
+    Git(NodeRefGit),
     GitHub(NodeRefGitHub),
     Indirect(NodeRefIndirect),
     Tarball(NodeRefTarball),
     Path(NodeRefPath),
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+pub struct NodeRefGit {
+    #[serde(rename = "ref")]
+    pub reference: Option<String>,
+    #[serde(rename = "rev")]
+    pub revision: Option<String>,
+    pub url: String,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
