@@ -159,7 +159,7 @@ impl NodeGraph {
         duplicates
     }
 
-    pub fn to_dot<'a>(&self) -> String {
+    pub fn to_dot(&self) -> String {
         let similarity_map = self.similarity_map();
 
         let node_labeller: &dyn Fn(_, (_, &Node)) -> String = &|_, (_, n)| {
