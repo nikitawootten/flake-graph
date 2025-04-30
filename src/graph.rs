@@ -97,7 +97,7 @@ fn process_node_inputs<'a>(
     // Mark the edge as visited so that it is not processed twice
     visited_nodes.insert(node_index);
 
-    return (graph, visited_nodes);
+    (graph, visited_nodes)
 }
 
 impl From<lock::FlakeLock> for NodeGraph {
