@@ -28,7 +28,7 @@ pub const SIMPLE_LOCK_STR: &str = include_str!("./simple_flake.lock");
 
 /// Struct representation of a simple lock file consisting of one input
 pub fn simple_lock() -> FlakeLock {
-    return FlakeLock {
+    FlakeLock {
         root: "root".to_string(),
         version: 7,
         nodes: HashMap::from([
@@ -68,7 +68,7 @@ pub fn simple_lock() -> FlakeLock {
                 },
             ),
         ]),
-    };
+    }
 }
 
 /// JSON string of a lock file with an input bound through a `follows` directive
@@ -76,7 +76,7 @@ pub const BOUND_LOCK_STR: &str = include_str!("./bound_flake.lock");
 
 // Struct representation of a lock file with an input bound through a `follows` directive
 pub fn bound_lock() -> FlakeLock {
-    return FlakeLock {
+    FlakeLock {
         root: "root".to_string(),
         version: 7,
         nodes: HashMap::from([
@@ -124,7 +124,7 @@ pub fn bound_lock() -> FlakeLock {
                 },
             ),
         ]),
-    };
+    }
 }
 
 /// JSON string of a lock file with an input loop
