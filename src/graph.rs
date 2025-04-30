@@ -143,22 +143,18 @@ impl From<lock::FlakeLock> for NodeGraph {
 impl NodeGraph {
     pub fn similarity_map(&self) -> HashMap<String, Vec<NodeIndex>> {
         let mut duplicates = HashMap::<String, Vec<NodeIndex>>::new();
-        self.graph
-            .node_indices()
-            .for_each(|index| match self.graph.node_weight(index) {
-                Some(weight) => {
-                    match weight.digest() {
-                        Some(digest) => match duplicates.get_mut(&digest) {
-                            Some(indices) => indices.push(index),
-                            _ => {
-                                duplicates.insert(digest, vec![index]);
-                            }
-                        },
-                        _ => {}
-                    };
-                }
-                _ => {}
-            });
+        self.graph.node_indices().for_each(|index| {
+            if let Some(weight) = self.graph.node_weight(index) {
+                if let Some(digest) = weight.digest() {
+                    match duplicates.get_mut(&digest) {
+                        Some(indices) => indices.push(index),
+                        _ => {
+                            duplicates.insert(digest, vec![index]);
+                        }
+                    }
+                };
+            }
+        });
 
         duplicates
     }
@@ -170,24 +166,20 @@ impl NodeGraph {
             let mut label = n.name.clone();
             let mut url: Option<String> = None;
 
-            match &n.locked {
-                Some(locked) => match &locked.reference {
-                    lock::NodeRef::GitHub(github) => {
-                        label.push_str(&format!("\\ngithub:{}/{}", github.owner, github.repo));
-                        url = match &github.revision {
-                            Some(rev) => Some(format!(
-                                "https://github.com/{}/{}/tree/{}",
-                                github.owner, github.repo, rev
-                            )),
-                            _ => Some(format!(
-                                "https://github.com/{}/{}",
-                                github.owner, github.repo
-                            )),
-                        };
-                    }
-                    _ => {}
-                },
-                _ => {}
+            if let Some(locked) = &n.locked {
+                if let lock::NodeRef::GitHub(github) = &locked.reference {
+                    label.push_str(&format!("\\ngithub:{}/{}", github.owner, github.repo));
+                    url = match &github.revision {
+                        Some(rev) => Some(format!(
+                            "https://github.com/{}/{}/tree/{}",
+                            github.owner, github.repo, rev
+                        )),
+                        _ => Some(format!(
+                            "https://github.com/{}/{}",
+                            github.owner, github.repo
+                        )),
+                    };
+                }
             }
 
             let mut node_label = format!("label = \"{}\"", label,);
