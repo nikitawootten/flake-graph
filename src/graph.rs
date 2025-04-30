@@ -220,13 +220,13 @@ impl NodeGraph {
     }
 }
 
-impl Into<lock::FlakeLock> for NodeGraph {
+impl From<NodeGraph> for lock::FlakeLock {
     // TODO
-    fn into(self) -> lock::FlakeLock {
+    fn from(val: NodeGraph) -> Self {
         lock::FlakeLock {
             nodes: HashMap::default(),
             root: "".to_string(),
-            version: self.version,
+            version: val.version,
         }
     }
 }
