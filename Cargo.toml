@@ -13,3 +13,6 @@ petgraph = { version = "0.6.4", features = ["serde-1"] }
 clap = { version = "4.5.26", features = ["derive"] }
 log = "0.4.24"
 env_logger = "0.11.6"
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"
