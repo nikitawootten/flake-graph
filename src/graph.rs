@@ -18,6 +18,9 @@ impl Node {
             lock::NodeRef::GitHub(github) => {
                 format!("github::{}/{}", github.owner, github.repo)
             }
+            lock::NodeRef::GitLab(gitlab) => {
+                format!("gitlab::{}/{}@{}", gitlab.owner, gitlab.repo, gitlab.host)
+            }
             lock::NodeRef::Indirect(indirect) => format!("indirect::{}", indirect.id),
             lock::NodeRef::Tarball(tarball) => format!("tarball::{}", tarball.url),
             lock::NodeRef::Path(path) => format!("path::{}", path.path),
@@ -177,6 +180,21 @@ impl NodeGraph {
                         _ => Some(format!(
                             "https://github.com/{}/{}",
                             github.owner, github.repo
+                        )),
+                    };
+                } else if let lock::NodeRef::GitLab(gitlab) = &locked.reference {
+                    label.push_str(&format!(
+                        "\\n{}:{}/{}",
+                        gitlab.host, gitlab.owner, gitlab.repo
+                    ));
+                    url = match &gitlab.revision {
+                        Some(rev) => Some(format!(
+                            "https://{}/{}/{}/-/tree/{}",
+                            gitlab.host, gitlab.owner, gitlab.repo, rev
+                        )),
+                        _ => Some(format!(
+                            "https://{}/{}/{}",
+                            gitlab.host, gitlab.owner, gitlab.repo
                         )),
                     };
                 }

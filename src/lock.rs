@@ -30,6 +30,7 @@ pub struct NodeLock {
 pub enum NodeRef {
     Git(NodeRefGit),
     GitHub(NodeRefGitHub),
+    GitLab(NodeRefGitLab),
     Indirect(NodeRefIndirect),
     Tarball(NodeRefTarball),
     Path(NodeRefPath),
@@ -52,6 +53,17 @@ pub struct NodeRefGitHub {
     #[serde(rename = "rev")]
     pub revision: Option<String>,
     pub repo: String,
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+pub struct NodeRefGitLab {
+    pub owner: String,
+    #[serde(rename = "ref")]
+    pub reference: Option<String>,
+    #[serde(rename = "rev")]
+    pub revision: Option<String>,
+    pub repo: String,
+    pub host: String,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
