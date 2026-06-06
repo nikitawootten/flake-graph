@@ -1,12 +1,15 @@
-{ pkgs ? import ./pkgs.nix }:
+{
+  pkgs ? import ./pkgs.nix,
+  lib ? pkgs.lib
+}:
 let
-  manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
+  manifest = (lib.importTOML ./Cargo.toml).package;
 in
 pkgs.rustPlatform.buildRustPackage {
   pname = manifest.name;
   version = manifest.version;
   cargoLock.lockFile = ./Cargo.lock;
-  src = pkgs.lib.cleanSource ./.;
+  src = lib.cleanSource ./.;
 
   doCheck = true;
   checkPhase = ''
@@ -14,4 +17,12 @@ pkgs.rustPlatform.buildRustPackage {
     cargoCheckHook
     runHook postCheck
   '';
+
+  meta = {
+    description = "Visualize your Nix flake.lock!";
+    homepage = "https://github.com/nikitawootten/flake-graph";
+    license = lib.licenses.mit;
+    maintainers = [ ];
+    mainProgram = manifest.name;
+  };
 }

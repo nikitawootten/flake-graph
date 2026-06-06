@@ -5,14 +5,18 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
-  outputs = { self, nixpkgs }: let 
+  outputs = { self, nixpkgs }: let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # forEachSystem [ "x86_64-linux" ] (_: { example = true; }) -> { x86_64-linux.example = true }
       forEachSystem = nixpkgs.lib.genAttrs systems;
   in {
-    packages = forEachSystem (system: {
-      default = nixpkgs.legacyPackages.${system}.callPackage ./. { };
-    });
+    packages = forEachSystem (system:
+      let
+        flake-graph = nixpkgs.legacyPackages.${system}.callPackage ./. { };
+      in {
+        inherit flake-graph;
+        default = flake-graph;
+      });
 
     checks = forEachSystem (system: {
       # Build the default package, including tests
