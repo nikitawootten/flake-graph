@@ -8,8 +8,9 @@ This project provides facilities for parsing and analyzing `flake.lock` files.
 
 ## Usage
 
-```
-$ flake-graph flake.lock | dot -Tsvg > flake-graph.svg
+```sh
+$ nix shell github:nikitawootten/flake-graph nixpkgs#graphviz \
+    --command sh -c 'flake-graph flake.lock | dot -Tsvg > flake-lock.svg'
 ```
 
 ## Sample
