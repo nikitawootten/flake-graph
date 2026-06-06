@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 use crate::lock;
+use crate::size::{self, SizeError};
 
 #[derive(Deserialize, Serialize, PartialEq, Debug)]
 pub struct Node {
@@ -143,7 +144,58 @@ impl From<lock::FlakeLock> for NodeGraph {
     }
 }
 
+/// Source sizes for a [`NodeGraph`], keyed by graph node index.
+#[derive(Debug, Default, PartialEq)]
+pub struct SizeSummary {
+    /// The source size in bytes for each node.
+    pub per_node: HashMap<NodeIndex, u64>,
+    /// Sum of every node's source size (duplicated sources counted once per node).
+    pub total: u64,
+    /// Sum of each distinct source's size (duplicated sources counted once).
+    pub deduped_total: u64,
+    /// Bytes attributable to duplicated sources (`total - deduped_total`).
+    pub wasted: u64,
+}
+
 impl NodeGraph {
+    /// Resolve the source size of every node.
+    pub fn source_sizes(&self, flake_dir: &str) -> Result<SizeSummary, SizeError> {
+        let mut summary = SizeSummary::default();
+
+        for indices in self.similarity_map().values() {
+            let locked = indices
+                .iter()
+                .find_map(|index| self.graph.node_weight(*index))
+                .and_then(|node| node.locked.as_ref());
+            let locked = match locked {
+                Some(locked) => locked,
+                None => continue,
+            };
+
+            log::trace!("Resolving source size for digest shared by {:?}", indices);
+            let size = size::source_size(locked)?;
+
+            summary.deduped_total += size;
+            for index in indices {
+                summary.per_node.insert(*index, size);
+                summary.total += size;
+            }
+        }
+
+        // The root node needs to be sized separately
+        if let std::collections::hash_map::Entry::Vacant(entry) = summary.per_node.entry(self.root)
+        {
+            log::trace!("Resolving source size for root flake at {}", flake_dir);
+            let size = size::flake_source_size(flake_dir)?;
+            entry.insert(size);
+            summary.total += size;
+            summary.deduped_total += size;
+        }
+
+        summary.wasted = summary.total - summary.deduped_total;
+        Ok(summary)
+    }
+
     pub fn similarity_map(&self) -> HashMap<String, Vec<NodeIndex>> {
         let mut duplicates = HashMap::<String, Vec<NodeIndex>>::new();
         self.graph.node_indices().for_each(|index| {
@@ -162,10 +214,10 @@ impl NodeGraph {
         duplicates
     }
 
-    pub fn to_dot(&self) -> String {
+    pub fn to_dot(&self, sizes: Option<&SizeSummary>) -> String {
         let similarity_map = self.similarity_map();
 
-        let node_labeller: &dyn Fn(_, (_, &Node)) -> String = &|_, (_, n)| {
+        let node_labeller: &dyn Fn(_, (NodeIndex, &Node)) -> String = &|_, (idx, n)| {
             let mut label = n.name.clone();
             let mut url: Option<String> = None;
 
@@ -200,6 +252,12 @@ impl NodeGraph {
                 }
             }
 
+            if let Some(sizes) = sizes {
+                if let Some(bytes) = sizes.per_node.get(&idx) {
+                    label.push_str(&format!("\\n{}", size::human_bytes(*bytes)));
+                }
+            }
+
             let mut node_label = format!("label = \"{}\"", label,);
 
             if let Some(url) = url {
@@ -228,12 +286,21 @@ impl NodeGraph {
             node_labeller,
         );
 
+        let graph_label = match sizes {
+            Some(sizes) => format!(
+                "    label=\"total: {}  (duplicated: {})\"\n    labelloc=t\n",
+                size::human_bytes(sizes.total),
+                size::human_bytes(sizes.wasted)
+            ),
+            None => String::new(),
+        };
+
         format!(
             r#"digraph {{
     node [colorscheme=oranges9 shape=record]
     rankdir=LR
-{:?}}}"#,
-            dot
+{}{:?}}}"#,
+            graph_label, dot
         )
     }
 }

@@ -38,9 +38,9 @@ pub enum NodeRef {
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct NodeRefGit {
-    #[serde(rename = "ref")]
+    #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
     pub reference: Option<String>,
-    #[serde(rename = "rev")]
+    #[serde(rename = "rev", skip_serializing_if = "Option::is_none")]
     pub revision: Option<String>,
     pub url: String,
 }
@@ -48,9 +48,9 @@ pub struct NodeRefGit {
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct NodeRefGitHub {
     pub owner: String,
-    #[serde(rename = "ref")]
+    #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
     pub reference: Option<String>,
-    #[serde(rename = "rev")]
+    #[serde(rename = "rev", skip_serializing_if = "Option::is_none")]
     pub revision: Option<String>,
     pub repo: String,
 }
@@ -58,9 +58,9 @@ pub struct NodeRefGitHub {
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct NodeRefGitLab {
     pub owner: String,
-    #[serde(rename = "ref")]
+    #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
     pub reference: Option<String>,
-    #[serde(rename = "rev")]
+    #[serde(rename = "rev", skip_serializing_if = "Option::is_none")]
     pub revision: Option<String>,
     pub repo: String,
     pub host: String,
