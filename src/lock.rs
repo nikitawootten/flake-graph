@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use smart_default::SmartDefault;
 use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, PartialEq, Debug)]
@@ -19,7 +20,7 @@ pub struct Node {
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeLock {
-    pub last_modified: u32,
+    pub last_modified: Option<u32>,
     pub nar_hash: String,
     #[serde(flatten)]
     pub reference: NodeRef,
@@ -33,6 +34,7 @@ pub enum NodeRef {
     GitLab(NodeRefGitLab),
     Indirect(NodeRefIndirect),
     Tarball(NodeRefTarball),
+    File(NodeRefFile),
     Path(NodeRefPath),
 }
 
@@ -55,7 +57,11 @@ pub struct NodeRefGitHub {
     pub repo: String,
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+fn gitlab_default_host() -> String {
+    "gitlab.com".to_string()
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone, SmartDefault)]
 pub struct NodeRefGitLab {
     pub owner: String,
     #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
@@ -63,6 +69,8 @@ pub struct NodeRefGitLab {
     #[serde(rename = "rev", skip_serializing_if = "Option::is_none")]
     pub revision: Option<String>,
     pub repo: String,
+    #[default = "gitlab.com"]
+    #[serde(default = "gitlab_default_host")]
     pub host: String,
 }
 
@@ -73,6 +81,11 @@ pub struct NodeRefIndirect {
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct NodeRefTarball {
+    pub url: String,
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+pub struct NodeRefFile {
     pub url: String,
 }
 
