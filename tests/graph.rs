@@ -1,6 +1,6 @@
 pub mod common;
 
-use common::{bound_lock, simple_lock, LOOPED_LOCK_STR};
+use common::{bound_lock, missing_fields_lock, simple_lock, LOOPED_LOCK_STR};
 use flake_graph::{
     graph::{NodeGraph, SizeSummary},
     lock::FlakeLock,
@@ -11,6 +11,13 @@ use std::collections::HashMap;
 #[test]
 fn build_simple_lock_graph() {
     let lock = simple_lock();
+    let graph = NodeGraph::from(lock);
+    println!("{}", graph.to_dot(None));
+}
+
+#[test]
+fn build_missing_field_lock_graph() {
+    let lock = missing_fields_lock();
     let graph = NodeGraph::from(lock);
     println!("{}", graph.to_dot(None));
 }

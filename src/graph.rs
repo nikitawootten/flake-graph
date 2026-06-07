@@ -24,6 +24,7 @@ impl Node {
             }
             lock::NodeRef::Indirect(indirect) => format!("indirect::{}", indirect.id),
             lock::NodeRef::Tarball(tarball) => format!("tarball::{}", tarball.url),
+            lock::NodeRef::File(file) => format!("file::{}", file.url),
             lock::NodeRef::Path(path) => format!("path::{}", path.path),
         })
     }
